@@ -32,7 +32,10 @@ int ButtonState;
 int x1=25, x2=27, x3=26;
 int y1=8, y2=7, y3=9;
 int score = 0;
-boolean isStop = false;
+boolean isStop1 = false;
+boolean isStop2 = false;
+int xWall1, xWall2, xWall3, xWall4; // variable for scrolling the wall
+int tinggibwh1, tinggibwh2, tinggibwh3, tinggibwh4; // the height of the low part of the wall
 SemaphoreHandle_t xMutex;
 
 // define tasks
@@ -46,7 +49,6 @@ TaskHandle_t Handle_Wall;
 TaskHandle_t Handle_Bird;
 TaskHandle_t Handle_Button;
 TaskHandle_t Handle_Score;
-TaskHandle_t Handle_Stop;
 
 void setup(void){
   //Input
@@ -78,21 +80,12 @@ void setup(void){
     xTaskCreate(TaskWall,(const portCHAR *)"Display Wall",128,NULL,2,&Handle_Wall);
     xTaskCreate(TaskBird,(const portCHAR *)"Display Bird",128,NULL,2,&Handle_Bird);
     xTaskCreate(TaskScore,(const portCHAR *)"Display Score",128,NULL,1,&Handle_Score);
-//    xTaskCreate(TaskStop,(const portCHAR *)"Stop Game Play",128,NULL,4,&Handle_Stop);
     
     vTaskStartScheduler();
   }
 }
 
 void loop(void){
-}
-
-void TaskStop(void *pvParameters) { // This is a task.
-  vTaskSuspend(Handle_Stop);
-  for (;;) {
-    vTaskSuspendAll();
-    delay(1000);
-  }
 }
 
 void TaskScore(void *pvParameters) { // This is a task.
@@ -125,18 +118,45 @@ void TaskButton(void *pvParameters) { // This is a task.
       {
         dmd.drawLine( x1, y1, x2, y1, GRAPHICS_INVERSE);
         dmd.drawLine( x3, y2, x3, y3, GRAPHICS_INVERSE);
-        if(isStop == true) {
+        if(isStop1 == true) {
           y1=8; y2=7; y3=9;
           score = 0;
-          isStop = false;
+          isStop1 = false;
         }
         y1 = y1 + 1;
         y2 = y2 + 1;
         y3 = y3 + 1;
         dmd.drawLine( x1, y1, x2, y1, GRAPHICS_NORMAL);
         dmd.drawLine( x3, y2, x3, y3, GRAPHICS_NORMAL);
+
+        if((xWall1<28)&&(xWall1>24))  {
+          if(y3>(tinggibwh1+6)){
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall2<28)&&(xWall2>24))  {
+          if(y3>(tinggibwh2+6)){
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall3<28)&&(xWall3>24))  {
+          if(y3>(tinggibwh3+6)){
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall4<28)&&(xWall4>24))  {
+          if(y3>(tinggibwh4+6)){
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        
         if(y3 > 15) {
-          isStop = true;
+          isStop1 = true;
+          isStop2 = true;
         }
       }
       xSemaphoreGive(xMutex);
@@ -151,18 +171,45 @@ void TaskBird(void *pvParameters) { // This is a task.
     {
       dmd.drawLine( x1, y1, x2, y1, GRAPHICS_INVERSE);
       dmd.drawLine( x3, y2, x3, y3, GRAPHICS_INVERSE);
-      if(isStop == true) {
+      if(isStop1 == true) {
         y1=8; y2=7; y3=9;
         score = 0;
-        isStop = false;
+        isStop1 = false;
       }
       y1 = y1 - 1;
       y2 = y2 - 1;
       y3 = y3 - 1;
       dmd.drawLine( x1, y1, x2, y1, GRAPHICS_NORMAL);
       dmd.drawLine( x3, y2, x3, y3, GRAPHICS_NORMAL);
-      if(y3 < 0) {
-          isStop = true;
+
+      if((xWall1<28)&&(xWall1>24))  {
+          if(y2<=tinggibwh1) {
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall2<28)&&(xWall2>24))  {
+          if(y2<=tinggibwh2) {
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall3<28)&&(xWall3>24))  {
+          if(y2<=tinggibwh3) {
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        else if((xWall4<28)&&(xWall4>24))  {
+          if(y2<=tinggibwh4) {
+            isStop1 = true;
+            isStop2 = true;
+          }
+        }
+        
+      if(y2 < 0) {
+          isStop1 = true;
+          isStop2 = true;
         }
     }
     xSemaphoreGive(xMutex); 
@@ -171,17 +218,15 @@ void TaskBird(void *pvParameters) { // This is a task.
 }
 
 void TaskWall(void *pvParameters) { // This is a task.
-  int xWall1, xWall2, xWall3, xWall4; // variable for scrolling the wall
-  int tinggibwh1, tinggibwh2, tinggibwh3, tinggibwh4; // the height of the low part of the wall
-  int lebar = 3; // lebar wall 3 pixel
-  int tinggi = 16; // tinggi total wall
+  int lebar = 2; // lebar wall 3 pixel
+  int tinggiCelah = 7; // tinggi total wall
 
   // inisiasi tinggi awal dan posisi awal dari setiap wall
   tinggibwh1 = random(2, 7);
   tinggibwh2 = random(2, 7);
   tinggibwh3 = random(2, 7);
   tinggibwh4 = random(2, 7);
-  xWall1 = 0;
+  xWall1 = -2;
   xWall2 = xWall1-8;
   xWall3 = xWall1-16;
   xWall4 = xWall1-24;
@@ -189,26 +234,27 @@ void TaskWall(void *pvParameters) { // This is a task.
   for (;;) {
     xSemaphoreTake(xMutex, portMAX_DELAY);
     {
-      if(isStop == true) {
-        xWall1 = 0;
+      if(isStop2 == true) {
+        xWall1 = -2;
         xWall2 = xWall1-8;
         xWall3 = xWall1-16;
         xWall4 = xWall1-24;
+        isStop2 = false;
       }
       // hilangkan wall untuk nanti dimunculkan lagi pada loop berikutnya
       dmd.clearScreen( true );
       // gambar wall pertama
-      dmd.drawFilledBox(xWall1,0,xWall1+2,tinggibwh1,GRAPHICS_NORMAL);
-      dmd.drawFilledBox(xWall1,(tinggibwh1 + 6),xWall1+2,15,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall1,0,xWall1+lebar,tinggibwh1,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall1,(tinggibwh1 + tinggiCelah),xWall1+lebar,15,GRAPHICS_NORMAL);
       // gambar wall kedua
-      dmd.drawFilledBox(xWall2,0,xWall2+2,tinggibwh2,GRAPHICS_NORMAL);
-      dmd.drawFilledBox(xWall2,(tinggibwh2 + 6),xWall2+2,15,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall2,0,xWall2+lebar,tinggibwh2,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall2,(tinggibwh2 + tinggiCelah),xWall2+lebar,15,GRAPHICS_NORMAL);
       // gambar wall ketiga
-      dmd.drawFilledBox(xWall3,0,xWall3+2,tinggibwh3,GRAPHICS_NORMAL);
-      dmd.drawFilledBox(xWall3,(tinggibwh3 + 6),xWall3+2,15,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall3,0,xWall3+lebar,tinggibwh3,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall3,(tinggibwh3 + tinggiCelah),xWall3+lebar,15,GRAPHICS_NORMAL);
       // gambar wall keempat
-      dmd.drawFilledBox(xWall4,0,xWall4+2,tinggibwh4,GRAPHICS_NORMAL);
-      dmd.drawFilledBox(xWall4,(tinggibwh4 + 6),xWall4+2,15,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall4,0,xWall4+lebar,tinggibwh4,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall4,(tinggibwh4 + tinggiCelah),xWall4+lebar,15,GRAPHICS_NORMAL);
       
       // increment masing-masing posisi wall
       xWall1++;
@@ -233,20 +279,20 @@ void TaskWall(void *pvParameters) { // This is a task.
       }
        
       if(xWall1 >= 32) {
-        xWall1 = 0;
-        tinggibwh1 = random(1, 10);
+        xWall1 = -2;
+        tinggibwh1 = random(2, 7);
       }
       if(xWall2 >= 32) {
-        xWall2 = 0;
-        tinggibwh2 = random(1, 10);
+        xWall2 = -2;
+        tinggibwh2 = random(2, 7);
       }
       if(xWall3 >= 32) {
-        xWall3 = 0;
-        tinggibwh3 = random(1, 10);
+        xWall3 = -2;
+        tinggibwh3 = random(2, 7);
       }
       if(xWall4 >= 32) {
-        xWall4 = 0;
-        tinggibwh4 = random(1, 10);
+        xWall4 = -2;
+        tinggibwh4 = random(2, 7);
       }
     }
     xSemaphoreGive(xMutex); 
