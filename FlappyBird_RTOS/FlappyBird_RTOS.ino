@@ -32,6 +32,7 @@ int ButtonState;
 int x1=25, x2=27, x3=26;
 int y1=8, y2=7, y3=9;
 int score = 0;
+boolean isStop = false;
 SemaphoreHandle_t xMutex;
 
 // define tasks
@@ -45,6 +46,7 @@ TaskHandle_t Handle_Wall;
 TaskHandle_t Handle_Bird;
 TaskHandle_t Handle_Button;
 TaskHandle_t Handle_Score;
+TaskHandle_t Handle_Stop;
 
 void setup(void){
   //Input
@@ -72,16 +74,25 @@ void setup(void){
   xMutex = xSemaphoreCreateMutex();
 
   if(xMutex != NULL) {
-//    xTaskCreate(TaskButton,(const portCHAR *)"Read Button",128,NULL,3,&Handle_Button);
+    xTaskCreate(TaskButton,(const portCHAR *)"Read Button",128,NULL,3,&Handle_Button);
     xTaskCreate(TaskWall,(const portCHAR *)"Display Wall",128,NULL,2,&Handle_Wall);
     xTaskCreate(TaskBird,(const portCHAR *)"Display Bird",128,NULL,2,&Handle_Bird);
     xTaskCreate(TaskScore,(const portCHAR *)"Display Score",128,NULL,1,&Handle_Score);
+//    xTaskCreate(TaskStop,(const portCHAR *)"Stop Game Play",128,NULL,4,&Handle_Stop);
     
     vTaskStartScheduler();
   }
 }
 
 void loop(void){
+}
+
+void TaskStop(void *pvParameters) { // This is a task.
+  vTaskSuspend(Handle_Stop);
+  for (;;) {
+    vTaskSuspendAll();
+    delay(1000);
+  }
 }
 
 void TaskScore(void *pvParameters) { // This is a task.
@@ -114,11 +125,19 @@ void TaskButton(void *pvParameters) { // This is a task.
       {
         dmd.drawLine( x1, y1, x2, y1, GRAPHICS_INVERSE);
         dmd.drawLine( x3, y2, x3, y3, GRAPHICS_INVERSE);
+        if(isStop == true) {
+          y1=8; y2=7; y3=9;
+          score = 0;
+          isStop = false;
+        }
         y1 = y1 + 1;
         y2 = y2 + 1;
         y3 = y3 + 1;
         dmd.drawLine( x1, y1, x2, y1, GRAPHICS_NORMAL);
         dmd.drawLine( x3, y2, x3, y3, GRAPHICS_NORMAL);
+        if(y3 > 15) {
+          isStop = true;
+        }
       }
       xSemaphoreGive(xMutex);
     }
@@ -132,11 +151,19 @@ void TaskBird(void *pvParameters) { // This is a task.
     {
       dmd.drawLine( x1, y1, x2, y1, GRAPHICS_INVERSE);
       dmd.drawLine( x3, y2, x3, y3, GRAPHICS_INVERSE);
+      if(isStop == true) {
+        y1=8; y2=7; y3=9;
+        score = 0;
+        isStop = false;
+      }
       y1 = y1 - 1;
       y2 = y2 - 1;
       y3 = y3 - 1;
       dmd.drawLine( x1, y1, x2, y1, GRAPHICS_NORMAL);
       dmd.drawLine( x3, y2, x3, y3, GRAPHICS_NORMAL);
+      if(y3 < 0) {
+          isStop = true;
+        }
     }
     xSemaphoreGive(xMutex); 
     vTaskDelay( 250 / portTICK_PERIOD_MS ); // wait for 250ms
@@ -150,10 +177,10 @@ void TaskWall(void *pvParameters) { // This is a task.
   int tinggi = 16; // tinggi total wall
 
   // inisiasi tinggi awal dan posisi awal dari setiap wall
-  tinggibwh1 = random(1, 10);
-  tinggibwh2 = random(1, 10);
-  tinggibwh3 = random(1, 10);
-  tinggibwh4 = random(1, 10);
+  tinggibwh1 = random(2, 7);
+  tinggibwh2 = random(2, 7);
+  tinggibwh3 = random(2, 7);
+  tinggibwh4 = random(2, 7);
   xWall1 = 0;
   xWall2 = xWall1-8;
   xWall3 = xWall1-16;
@@ -162,6 +189,12 @@ void TaskWall(void *pvParameters) { // This is a task.
   for (;;) {
     xSemaphoreTake(xMutex, portMAX_DELAY);
     {
+      if(isStop == true) {
+        xWall1 = 0;
+        xWall2 = xWall1-8;
+        xWall3 = xWall1-16;
+        xWall4 = xWall1-24;
+      }
       // hilangkan wall untuk nanti dimunculkan lagi pada loop berikutnya
       dmd.clearScreen( true );
       // gambar wall pertama
@@ -186,18 +219,18 @@ void TaskWall(void *pvParameters) { // This is a task.
        * awal x = 0 saat kembali ke posisi x = 0, tinggi dari setiap wall juga diubah dengan 
        * tinggi yang baru setiap kali ada wall yang kembali ke posisi x = 0, skor bertambah 1
        */
-  //    if(xWall1 = 30) {
-  //      score++;
-  //    } 
-  //    else if(xWall2 = 30) {
-  //      score++;
-  //    }
-  //    else if(xWall3 = 30) {
-  //      score++;
-  //    }
-  //    else if(xWall4 = 30) {
-  //      score++;
-  //    }
+      if(xWall1 == 30) {
+        score++;
+      } 
+      else if(xWall2 == 30) {
+        score++;
+      }
+      else if(xWall3 == 30) {
+        score++;
+      }
+      else if(xWall4 == 30) {
+        score++;
+      }
        
       if(xWall1 >= 32) {
         xWall1 = 0;
