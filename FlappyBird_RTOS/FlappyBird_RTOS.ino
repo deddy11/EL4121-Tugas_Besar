@@ -40,6 +40,12 @@ void TaskBird( void *pvParameters );
 void TaskButton( void *pvParameters );
 void TaskScore( void *pvParameters );
 
+// define task handle
+TaskHandle_t Handle_Wall;
+TaskHandle_t Handle_Bird;
+TaskHandle_t Handle_Button;
+TaskHandle_t Handle_Score;
+
 void setup(void){
   //Input
   pinMode(inpButton, INPUT);
@@ -66,10 +72,10 @@ void setup(void){
   xMutex = xSemaphoreCreateMutex();
 
   if(xMutex != NULL) {
-    xTaskCreate(TaskWall,(const portCHAR *)"Display Wall",128,NULL,2,NULL);
-    xTaskCreate(TaskBird,(const portCHAR *)"Display Bird",128,NULL,2,NULL);
-    xTaskCreate(TaskButton,(const portCHAR *)"Read Button",128,NULL,3,NULL);
-    xTaskCreate(TaskScore,(const portCHAR *)"Display Score",128,NULL,1,NULL);
+//    xTaskCreate(TaskButton,(const portCHAR *)"Read Button",128,NULL,3,&Handle_Button);
+    xTaskCreate(TaskWall,(const portCHAR *)"Display Wall",128,NULL,2,&Handle_Wall);
+    xTaskCreate(TaskBird,(const portCHAR *)"Display Bird",128,NULL,2,&Handle_Bird);
+    xTaskCreate(TaskScore,(const portCHAR *)"Display Score",128,NULL,1,&Handle_Score);
     
     vTaskStartScheduler();
   }
@@ -81,20 +87,22 @@ void loop(void){
 void TaskScore(void *pvParameters) { // This is a task.
   int digit = 0;
   for (;;) {
-    digitalWrite(decoder0, LOW);
-    digitalWrite(decoder1, LOW);
-    bcd(score%10);
-    delay(1);
-    digitalWrite(decoder0, HIGH);
-    digitalWrite(decoder1, LOW);
-    bcd((score%100)/10);
-    delay(1);
-    digitalWrite(decoder0, LOW);
-    digitalWrite(decoder1, HIGH);
-    bcd(score/100);
-    delay(1);
-    
-    vTaskDelay( 1000 / portTICK_PERIOD_MS ); // wait for 1ms
+    vTaskSuspendAll();
+    {
+      digitalWrite(decoder0, LOW);
+      digitalWrite(decoder1, LOW);
+      bcd(score%10);
+      delay(1);
+      digitalWrite(decoder0, HIGH);
+      digitalWrite(decoder1, LOW);
+      bcd((score%100)/10);
+      delay(1);
+      digitalWrite(decoder0, LOW);
+      digitalWrite(decoder1, HIGH);
+      bcd(score/100);
+      delay(1);
+    }
+    xTaskResumeAll();
   }
 }
 
@@ -140,7 +148,6 @@ void TaskWall(void *pvParameters) { // This is a task.
   int tinggibwh1, tinggibwh2, tinggibwh3, tinggibwh4; // the height of the low part of the wall
   int lebar = 3; // lebar wall 3 pixel
   int tinggi = 16; // tinggi total wall
-  int delaytime = 250; // jika dibutuhkan
 
   // inisiasi tinggi awal dan posisi awal dari setiap wall
   tinggibwh1 = random(1, 10);
@@ -153,59 +160,64 @@ void TaskWall(void *pvParameters) { // This is a task.
   xWall4 = xWall1-24;
   
   for (;;) {
-    // hilangkan wall untuk nanti dimunculkan lagi pada loop berikutnya
-    dmd.clearScreen( true );
-    // gambar wall pertama
-    dmd.drawFilledBox(xWall1,0,xWall1+2,tinggibwh1,GRAPHICS_NORMAL);
-    dmd.drawFilledBox(xWall1,(tinggibwh1 + 6),xWall1+2,15,GRAPHICS_NORMAL);
-    // gambar wall kedua
-    dmd.drawFilledBox(xWall2,0,xWall2+2,tinggibwh2,GRAPHICS_NORMAL);
-    dmd.drawFilledBox(xWall2,(tinggibwh2 + 6),xWall2+2,15,GRAPHICS_NORMAL);
-    // gambar wall ketiga
-    dmd.drawFilledBox(xWall3,0,xWall3+2,tinggibwh3,GRAPHICS_NORMAL);
-    dmd.drawFilledBox(xWall3,(tinggibwh3 + 6),xWall3+2,15,GRAPHICS_NORMAL);
-    // gambar wall keempat
-    dmd.drawFilledBox(xWall4,0,xWall4+2,tinggibwh4,GRAPHICS_NORMAL);
-    dmd.drawFilledBox(xWall4,(tinggibwh4 + 6),xWall4+2,15,GRAPHICS_NORMAL);
+    xSemaphoreTake(xMutex, portMAX_DELAY);
+    {
+      // hilangkan wall untuk nanti dimunculkan lagi pada loop berikutnya
+      dmd.clearScreen( true );
+      // gambar wall pertama
+      dmd.drawFilledBox(xWall1,0,xWall1+2,tinggibwh1,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall1,(tinggibwh1 + 6),xWall1+2,15,GRAPHICS_NORMAL);
+      // gambar wall kedua
+      dmd.drawFilledBox(xWall2,0,xWall2+2,tinggibwh2,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall2,(tinggibwh2 + 6),xWall2+2,15,GRAPHICS_NORMAL);
+      // gambar wall ketiga
+      dmd.drawFilledBox(xWall3,0,xWall3+2,tinggibwh3,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall3,(tinggibwh3 + 6),xWall3+2,15,GRAPHICS_NORMAL);
+      // gambar wall keempat
+      dmd.drawFilledBox(xWall4,0,xWall4+2,tinggibwh4,GRAPHICS_NORMAL);
+      dmd.drawFilledBox(xWall4,(tinggibwh4 + 6),xWall4+2,15,GRAPHICS_NORMAL);
+      
+      // increment masing-masing posisi wall
+      xWall1++;
+      xWall2++;
+      xWall3++;
+      xWall4++;
+      /* atur kasus agar setiap kali posisi wall mencapai maksimal, maka ia kembali ke posisi 
+       * awal x = 0 saat kembali ke posisi x = 0, tinggi dari setiap wall juga diubah dengan 
+       * tinggi yang baru setiap kali ada wall yang kembali ke posisi x = 0, skor bertambah 1
+       */
+  //    if(xWall1 = 30) {
+  //      score++;
+  //    } 
+  //    else if(xWall2 = 30) {
+  //      score++;
+  //    }
+  //    else if(xWall3 = 30) {
+  //      score++;
+  //    }
+  //    else if(xWall4 = 30) {
+  //      score++;
+  //    }
+       
+      if(xWall1 >= 32) {
+        xWall1 = 0;
+        tinggibwh1 = random(1, 10);
+      }
+      if(xWall2 >= 32) {
+        xWall2 = 0;
+        tinggibwh2 = random(1, 10);
+      }
+      if(xWall3 >= 32) {
+        xWall3 = 0;
+        tinggibwh3 = random(1, 10);
+      }
+      if(xWall4 >= 32) {
+        xWall4 = 0;
+        tinggibwh4 = random(1, 10);
+      }
+    }
+    xSemaphoreGive(xMutex); 
     
-    // increment masing-masing posisi wall
-    xWall1++;
-    xWall2++;
-    xWall3++;
-    xWall4++;
-    /* atur kasus agar setiap kali posisi wall mencapai maksimal, maka ia kembali ke posisi 
-     * awal x = 0 saat kembali ke posisi x = 0, tinggi dari setiap wall juga diubah dengan 
-     * tinggi yang baru setiap kali ada wall yang kembali ke posisi x = 0, skor bertambah 1
-     */
-//    if(xWall1 = 30) {
-//      score++;
-//    } 
-//    else if(xWall2 = 30) {
-//      score++;
-//    }
-//    else if(xWall3 = 30) {
-//      score++;
-//    }
-//    else if(xWall4 = 30) {
-//      score++;
-//    }
-     
-    if(xWall1 >= 32) {
-      xWall1 = 0;
-      tinggibwh1 = random(1, 10);
-    }
-    if(xWall2 >= 32) {
-      xWall2 = 0;
-      tinggibwh2 = random(1, 10);
-    }
-    if(xWall3 >= 32) {
-      xWall3 = 0;
-      tinggibwh3 = random(1, 10);
-    }
-    if(xWall4 >= 32) {
-      xWall4 = 0;
-      tinggibwh4 = random(1, 10);
-    }
     vTaskDelay( 250 / portTICK_PERIOD_MS ); // wait for 250ms
   }
 }
